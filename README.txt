@@ -1,0 +1,1 @@
+Made a mistake? No problem! With Flow Version History, you can restore older versions of your Flows. This way, you always have a backup of your most recent changes. The revisions will be saved automatically, so you don't have to do any actions prior to saving the Flow. It all happens in the background.

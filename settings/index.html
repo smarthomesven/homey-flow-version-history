@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
+  </head>
+  <body>
+    <header class="homey-header">
+      <h1 class="homey-title">Flow Revisions</h1>
+      <p class="homey-subtitle">View and restore saved flow revisions</p>
+    </header>
+
+    <fieldset class="homey-form-fieldset">
+      <legend class="homey-form-legend">Look up a Flow</legend>
+      <p>You can get the Flow ID by opening the Flows page, clicking the 3 dots (menu) and clicking "Copy ID" while holding the ALT key.</p>
+      <div class="homey-form-group">
+        <label class="homey-form-label" for="flowId">Flow ID</label>
+        <input class="homey-form-input" id="flowId" type="text" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" />
+      </div>
+      <button id="loadBtn" class="homey-button-primary-full">Load Revisions</button>
+    </fieldset>
+
+    <div id="results" style="margin-top: 16px;"></div>
+
+    <script type="text/javascript">
+      function onHomeyReady(Homey) {
+        Homey.ready();
+
+        Homey.api('GET', '/homeyBaseUrl', null, function(err, result) {
+            if (!err) homeyBaseUrl = result;
+        });
+
+        document.getElementById('loadBtn').addEventListener('click', loadRevisions);
+        document.getElementById('flowId').addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') loadRevisions();
+        });
+
+        function loadRevisions() {
+          const flowId = document.getElementById('flowId').value.trim();
+          const results = document.getElementById('results');
+
+          if (!flowId) {
+            Homey.alert('Please enter a Flow ID.');
+            return;
+          }
+
+          const btn = document.getElementById('loadBtn');
+          btn.classList.add('is-loading');
+          results.innerHTML = '';
+
+          Homey.get('flow_revisions_' + flowId, function(err, revisions) {
+            btn.classList.remove('is-loading');
+
+            if (err) return Homey.alert(err.message || err);
+
+            if (!revisions || revisions.length === 0) {
+              results.innerHTML = '<p style="color: var(--homey-text-color-secondary, #888); padding: 8px 0;">No revisions found for this Flow ID.</p>';
+              return;
+            }
+
+            renderRevisions(revisions);
+          });
+        }
+
+        function renderRevisions(revisions) {
+        const results = document.getElementById('results');
+        results.innerHTML = '';
+
+        const first = revisions[0];
+        const flowName = first.name || 'Unnamed Flow';
+        const isAdvanced = !!first.isAdvanced;
+
+        const fieldset = document.createElement('fieldset');
+        fieldset.className = 'homey-form-fieldset';
+
+        const info = document.createElement('p');
+        info.textContent = "You can import a Flow by clicking the Flows tab, clicking the 3 dots (menu) on the 'My Flows' folder, and clicking 'Import' while holding the ALT key.";
+        fieldset.appendChild(info);
+        const legend = document.createElement('legend');
+        legend.className = 'homey-form-legend';
+        legend.textContent = flowName + ' (' + (isAdvanced ? 'Advanced' : 'Standard') + ') — ' + revisions.length + ' revision(s)';
+        fieldset.appendChild(legend);
+
+        revisions.forEach(function(revision, index) {
+            const date = new Date(revision.timestamp);
+            const label = index === 0 ? '⬤ Latest' : 'Revision ' + (index + 1);
+
+            const group = document.createElement('div');
+            group.className = 'homey-form-group';
+            group.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+
+            const info = document.createElement('div');
+            info.innerHTML = '<strong>' + label + '</strong><br><small style="opacity:.7">' + date.toLocaleString() + '</small>';
+
+            const btn = document.createElement('button');
+            btn.className = 'homey-button-primary-shadow';
+            btn.textContent = 'Download';
+            btn.addEventListener('click', function() {
+            downloadRevision(revision, flowName, isAdvanced);
+            });
+
+            group.appendChild(info);
+            group.appendChild(btn);
+            fieldset.appendChild(group);
+        });
+
+        results.appendChild(fieldset);
+        }
+
+        function downloadRevision(revision, flowName, isAdvanced) {
+        if (!homeyBaseUrl) {
+            Homey.alert('Still loading Homey URL, please try again.');
+            return;
+        }
+
+        const ext = isAdvanced ? 'homeyadvflow' : 'homeystdflow';
+        const name = (flowName || 'flow').replace(/[^a-z0-9_\-]/gi, '_');
+        const fileUrl = `${homeyBaseUrl}/app/nl.dypodex.versionhistory/userdata/${revision.filename}`;
+
+        const dlUrl = 'https://smarthomesven.github.io/flowversionhistory-html/dl.html'
+            + '?u=' + encodeURIComponent(fileUrl)
+            + '&n=' + encodeURIComponent(name)
+            + '&e=' + ext;
+
+        Homey.openURL(dlUrl);
+        }
+      }
+    </script>
+  </body>
+</html>
