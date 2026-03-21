@@ -12,6 +12,11 @@
   "description": {
     "en": "Made a mistake? No problem!"
   },
+  "source": "https://github.com/smarthomesven/homey-flow-version-history",
+  "bugs": {
+    "url": "https://github.com/smarthomesven/homey-flow-version-history/issues"
+  },
+  "homeyCommunityTopicId": 152775,
   "category": [
     "tools"
   ],
