@@ -19,6 +19,7 @@ module.exports = class MyApp extends Homey.App {
     });
     if (!this.homey.settings.get('isFirstRun')) {
       await this.initFlowRevisions();
+      await this.cleanupTrash();
       this.homey.settings.set('isFirstRun',true);
     }
     await this._api.flow.connect();
@@ -26,6 +27,8 @@ module.exports = class MyApp extends Homey.App {
     this._api.flow.on('advancedflow.create', async flow => await this.onFlowUpdate(flow,true));
     this._api.flow.on('flow.update', async flow => await this.onFlowUpdate(flow,false));
     this._api.flow.on('advancedflow.update', async flow => await this.onFlowUpdate(flow,true));
+    this._api.flow.on('flow.delete', async flow => await this.onFlowDelete(flow, false));
+    this._api.flow.on('advancedflow.delete', async flow => await this.onFlowDelete(flow, true));
   }
 
   async getFlowRevisions(flowId) {
@@ -35,6 +38,54 @@ module.exports = class MyApp extends Homey.App {
   async getHomeyBaseUrl() {
     const homeyId = await this.homey.cloud.getHomeyId();
     return `https://${homeyId}.connect.athom.com`;
+  }
+
+  async cleanupTrash() {
+    const trash = (await this.homey.settings.get('flow_trash')) ?? [];
+    const cutoff = Date.now() - (30 * 24 * 60 * 60 * 1000);
+
+    const remaining = [];
+    for (const entry of trash) {
+      if (new Date(entry.deletedAt).getTime() < cutoff) {
+        try { await fs.unlink(path.join('/userdata', entry.filename)); } catch (e) {}
+      } else {
+        remaining.push(entry);
+      }
+    }
+
+    await this.homey.settings.set('flow_trash', remaining);
+  }
+
+  async onFlowDelete(flow, isAdvanced) {
+    const revisionsKey = `flow_revisions_${flow.id}`;
+    const revisions = (await this.homey.settings.get(revisionsKey)) ?? [];
+
+    let filename;
+    let flowName = flow.name;
+
+    if (revisions.length > 0) {
+      flowName = flowName || revisions[0].name;
+      filename = revisions[0].filename;
+      for (const rev of revisions.slice(1)) {
+        try { await fs.unlink(path.join('/userdata', rev.filename)); } catch (e) {}
+      }
+    } else {
+      filename = uuidv4() + '.json';
+      await fs.writeFile(path.join('/userdata', filename), JSON.stringify(this.formatFlow(flow, isAdvanced)), 'utf8');
+    }
+
+    await this.homey.settings.unset(revisionsKey);
+
+    const trash = (await this.homey.settings.get('flow_trash')) ?? [];
+    trash.unshift({
+      id: flow.id,
+      name: flowName || 'Unnamed Flow',
+      isAdvanced,
+      filename,
+      deletedAt: new Date().toISOString(),
+    });
+
+    await this.homey.settings.set('flow_trash', trash);
   }
 
   async initFlowRevisions() {

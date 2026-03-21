@@ -20,6 +20,8 @@
     </fieldset>
 
     <div id="results" style="margin-top: 16px;"></div>
+    <div id="trashSection" style="margin-top: 24px;"></div>
+
 
     <script type="text/javascript">
       function onHomeyReady(Homey) {
@@ -33,6 +35,60 @@
         document.getElementById('flowId').addEventListener('keydown', function(e) {
           if (e.key === 'Enter') loadRevisions();
         });
+
+        function loadTrash() {
+          Homey.get('flow_trash', function(err, trash) {
+            const section = document.getElementById('trashSection');
+            if (err || !trash || trash.length === 0) {
+              section.innerHTML = '';
+              return;
+            }
+
+            const fieldset = document.createElement('fieldset');
+            fieldset.className = 'homey-form-fieldset';
+
+            const legend = document.createElement('legend');
+            legend.className = 'homey-form-legend';
+            legend.textContent = 'Trash (' + trash.length + ')';
+            fieldset.appendChild(legend);
+
+            const note = document.createElement('p');
+            note.style.cssText = 'font-size: .8rem; opacity: .5; margin-bottom: 8px;';
+            note.textContent = 'Deleted flows are permanently removed after 30 days.';
+            fieldset.appendChild(note);
+
+            trash.forEach(function(entry) {
+              const deletedAt = new Date(entry.deletedAt);
+              const expiresAt = new Date(deletedAt.getTime() + 30 * 24 * 60 * 60 * 1000);
+              const daysLeft = Math.ceil((expiresAt - Date.now()) / (1000 * 60 * 60 * 24));
+
+              const group = document.createElement('div');
+              group.className = 'homey-form-group';
+              group.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+
+              const info = document.createElement('div');
+              info.innerHTML =
+                '<strong>' + (entry.name || 'Unnamed Flow') + '</strong>' +
+                ' <small style="opacity:.5">' + (entry.isAdvanced ? 'Advanced' : 'Standard') + '</small>' +
+                '<br><small style="opacity:.7">Deleted ' + deletedAt.toLocaleString() + ' — expires in ' + daysLeft + ' day(s)</small>';
+
+              const btn = document.createElement('button');
+              btn.className = 'homey-button-primary-shadow';
+              btn.textContent = 'Download';
+              btn.addEventListener('click', function() {
+                downloadRevision(entry, entry.name, entry.isAdvanced);
+              });
+
+              group.appendChild(info);
+              group.appendChild(btn);
+              fieldset.appendChild(group);
+            });
+
+            section.appendChild(fieldset);
+          });
+        }
+
+        loadTrash();
 
         function loadRevisions() {
           const flowId = document.getElementById('flowId').value.trim();
@@ -62,66 +118,66 @@
         }
 
         function renderRevisions(revisions) {
-        const results = document.getElementById('results');
-        results.innerHTML = '';
+          const results = document.getElementById('results');
+          results.innerHTML = '';
 
-        const first = revisions[0];
-        const flowName = first.name || 'Unnamed Flow';
-        const isAdvanced = !!first.isAdvanced;
+          const first = revisions[0];
+          const flowName = first.name || 'Unnamed Flow';
+          const isAdvanced = !!first.isAdvanced;
 
-        const fieldset = document.createElement('fieldset');
-        fieldset.className = 'homey-form-fieldset';
+          const fieldset = document.createElement('fieldset');
+          fieldset.className = 'homey-form-fieldset';
 
-        const info = document.createElement('p');
-        info.textContent = "You can import a Flow by clicking the Flows tab, clicking the 3 dots (menu) on the 'My Flows' folder, and clicking 'Import' while holding the ALT key.";
-        fieldset.appendChild(info);
-        const legend = document.createElement('legend');
-        legend.className = 'homey-form-legend';
-        legend.textContent = flowName + ' (' + (isAdvanced ? 'Advanced' : 'Standard') + ') — ' + revisions.length + ' revision(s)';
-        fieldset.appendChild(legend);
+          const info = document.createElement('p');
+          info.textContent = "You can import a Flow by clicking the Flows tab, clicking the 3 dots (menu) on the 'My Flows' folder, and clicking 'Import' while holding the ALT key.";
+          fieldset.appendChild(info);
+          const legend = document.createElement('legend');
+          legend.className = 'homey-form-legend';
+          legend.textContent = flowName + ' (' + (isAdvanced ? 'Advanced' : 'Standard') + ') — ' + revisions.length + ' revision(s)';
+          fieldset.appendChild(legend);
 
-        revisions.forEach(function(revision, index) {
-            const date = new Date(revision.timestamp);
-            const label = index === 0 ? '⬤ Latest' : 'Revision ' + (index + 1);
+          revisions.forEach(function(revision, index) {
+              const date = new Date(revision.timestamp);
+              const label = index === 0 ? '⬤ Latest' : 'Revision ' + (index + 1);
 
-            const group = document.createElement('div');
-            group.className = 'homey-form-group';
-            group.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+              const group = document.createElement('div');
+              group.className = 'homey-form-group';
+              group.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
 
-            const info = document.createElement('div');
-            info.innerHTML = '<strong>' + label + '</strong><br><small style="opacity:.7">' + date.toLocaleString() + '</small>';
+              const info = document.createElement('div');
+              info.innerHTML = '<strong>' + label + '</strong><br><small style="opacity:.7">' + date.toLocaleString() + '</small>';
 
-            const btn = document.createElement('button');
-            btn.className = 'homey-button-primary-shadow';
-            btn.textContent = 'Download';
-            btn.addEventListener('click', function() {
-            downloadRevision(revision, flowName, isAdvanced);
-            });
+              const btn = document.createElement('button');
+              btn.className = 'homey-button-primary-shadow';
+              btn.textContent = 'Download';
+              btn.addEventListener('click', function() {
+              downloadRevision(revision, flowName, isAdvanced);
+              });
 
-            group.appendChild(info);
-            group.appendChild(btn);
-            fieldset.appendChild(group);
-        });
+              group.appendChild(info);
+              group.appendChild(btn);
+              fieldset.appendChild(group);
+          });
 
-        results.appendChild(fieldset);
+          results.appendChild(fieldset);
         }
 
         function downloadRevision(revision, flowName, isAdvanced) {
-        if (!homeyBaseUrl) {
-            Homey.alert('Still loading Homey URL, please try again.');
-            return;
-        }
+          if (!homeyBaseUrl) {
+              Homey.alert('Still loading Homey URL, please try again.');
+              return;
+          }
 
-        const ext = isAdvanced ? 'homeyadvflow' : 'homeystdflow';
-        const name = (flowName || 'flow').replace(/[^a-z0-9_\-]/gi, '_');
-        const fileUrl = `${homeyBaseUrl}/app/nl.dypodex.versionhistory/userdata/${revision.filename}`;
+          const ext = isAdvanced ? 'homeyadvflow' : 'homeystdflow';
+          const name = (flowName || 'flow').replace(/[^a-z0-9_\-]/gi, '_');
+          const fileUrl = `${homeyBaseUrl}/app/nl.dypodex.versionhistory/userdata/${revision.filename}`;
 
-        const dlUrl = 'https://smarthomesven.github.io/flowversionhistory-html/dl.html'
-            + '?u=' + encodeURIComponent(fileUrl)
-            + '&n=' + encodeURIComponent(name)
-            + '&e=' + ext;
+          const dlUrl = 'https://smarthomesven.github.io/flowversionhistory-html/dl.html'
+              + '?u=' + encodeURIComponent(fileUrl)
+              + '&n=' + encodeURIComponent(name)
+              + '&e=' + ext;
 
-        Homey.openURL(dlUrl);
+          Homey.openURL(dlUrl);
         }
       }
     </script>
