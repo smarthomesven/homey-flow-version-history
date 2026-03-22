@@ -38,6 +38,18 @@
     "homeyBaseUrl": {
       "method": "GET",
       "path": "/homeyBaseUrl"
+    },
+    "setMaxRevisions": {
+      "method": "POST",
+      "path": "/setMaxRevisions"
+    },
+    "purgeRevisions": {
+      "method": "POST",
+      "path": "/purgeRevisions"
+    },
+    "purgeTrash": {
+      "method": "POST",
+      "path": "/purgeTrash"
     }
   }
 }

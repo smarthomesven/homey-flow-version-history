@@ -22,10 +22,97 @@
     <div id="results" style="margin-top: 16px;"></div>
     <div id="trashSection" style="margin-top: 24px;"></div>
 
+    <fieldset class="homey-form-fieldset">
+      <legend class="homey-form-legend">Settings</legend>
+      <div class="homey-form-group">
+        <label class="homey-form-label" for="maxRevisions">Maximum revisions per Flow</label>
+        <input class="homey-form-input" id="maxRevisions" type="number" min="1" max="20" value="5" />
+      </div>
+      <button id="saveSettingsBtn" class="homey-button-primary-full">Save Settings</button>
+    </fieldset>
+
+    <fieldset class="homey-form-fieldset">
+      <legend class="homey-form-legend">Danger Zone</legend>
+      <div class="homey-form-group">
+        <label class="homey-form-label">Empty trash</label>
+        <small style="opacity:.6; display:block; margin-bottom:8px;">
+          Permanently deletes all Flows currently in the trash.
+        </small>
+        <button id="purgeTrashBtn" class="homey-button-danger-shadow">Empty Trash</button>
+      </div>
+      <div class="homey-form-group">
+        <label class="homey-form-label">Purge all revisions</label>
+        <small style="opacity:.6; display:block; margin-bottom:8px;">
+          This deletes all stored revisions and reinitializes the versioning system.
+        </small>
+        <button id="purgeRevisionsBtn" class="homey-button-danger-shadow">Purge Revisions</button>
+      </div>
+    </fieldset>
+
 
     <script type="text/javascript">
       function onHomeyReady(Homey) {
         Homey.ready();
+
+        let maxRevisions;
+
+        Homey.get('max_revisions', function(err, val) {
+          if (!err && val) {
+            document.getElementById('maxRevisions').value = val;
+            maxRevisions = val;
+          }
+        });
+
+        document.getElementById('purgeRevisionsBtn').addEventListener('click', function() {
+          const response = Homey.confirm('This will delete all stored revisions and reinitialize the revisions system. This action is permanent and cannot be undone. Are you sure?');
+          if (!response) return;
+
+          const btn = document.getElementById('purgeRevisionsBtn');
+          btn.classList.add('is-loading');
+
+          Homey.api('POST', '/purgeRevisions', {}, function(err) {
+            btn.classList.remove('is-loading');
+            if (err) return Homey.alert(err.message || err);
+            Homey.alert('All revisions have been purged and reinitialized.');
+          });
+        });
+
+        document.getElementById('purgeTrashBtn').addEventListener('click', function() {
+          const response = Homey.confirm('This will delete all Flows in the trash. This action is permanent and cannot be undone. Are you sure?');
+          if (!response) return;
+
+          const btn = document.getElementById('purgeTrashBtn');
+          btn.classList.add('is-loading');
+
+          Homey.api('POST', '/purgeTrash', {}, function (err) {
+            btn.classList.remove('is-loading');
+            if (err) return Homey.alert(err.message || err);
+            document.getElementById('trashSection').innerHTML = '';
+            Homey.alert('Trash has been emptied.');
+          });
+        });
+
+        document.getElementById('saveSettingsBtn').addEventListener('click', function() {
+          const val = parseInt(document.getElementById('maxRevisions').value, 10);
+          if (isNaN(val) || val < 1 || val > 20) {
+            Homey.alert('Please enter a number between 1 and 20.');
+            return;
+          }
+          if (maxRevisions > document.getElementById('maxRevisions').value) {
+            const response = Homey.confirm('When changing the maximum revisions to a lower value, all older revisions will be removed. Are you sure you want to continue?');
+            if (!response) return;
+            maxRevisions = document.getElementById('maxRevisions').value;
+          }
+
+          const btn = document.getElementById('saveSettingsBtn');
+          btn.classList.add('is-loading');
+
+          Homey.api('POST', '/setMaxRevisions', { max: val }, function(err) {
+            btn.classList.remove('is-loading');
+            if (err) return Homey.alert(err.message || err);
+            Homey.alert('Settings saved.');
+          });
+        });
 
         Homey.api('GET', '/homeyBaseUrl', null, function(err, result) {
             if (!err) homeyBaseUrl = result;
@@ -54,7 +141,7 @@
 
             const note = document.createElement('p');
             note.style.cssText = 'font-size: .8rem; opacity: .5; margin-bottom: 8px;';
-            note.textContent = 'Deleted flows are permanently removed after 30 days.';
+            note.textContent = 'Deleted Flows are permanently removed after 30 days.';
             fieldset.appendChild(note);
 
             trash.forEach(function(entry) {

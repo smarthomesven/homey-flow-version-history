@@ -19,9 +19,9 @@ module.exports = class MyApp extends Homey.App {
     });
     if (!this.homey.settings.get('isFirstRun')) {
       await this.initFlowRevisions();
-      await this.cleanupTrash();
       this.homey.settings.set('isFirstRun',true);
     }
+    await this.cleanupTrash();
     await this._api.flow.connect();
     this._api.flow.on('flow.create', async flow => await this.onFlowUpdate(flow,false));
     this._api.flow.on('advancedflow.create', async flow => await this.onFlowUpdate(flow,true));
@@ -29,6 +29,30 @@ module.exports = class MyApp extends Homey.App {
     this._api.flow.on('advancedflow.update', async flow => await this.onFlowUpdate(flow,true));
     this._api.flow.on('flow.delete', async flow => await this.onFlowDelete(flow, false));
     this._api.flow.on('advancedflow.delete', async flow => await this.onFlowDelete(flow, true));
+    this._cleanupInterval = this.homey.setInterval(() => this.cleanupTrash(), 60 * 60 * 1000);
+  }
+
+  async purgeRevisions() {
+    const allKeys = this.homey.settings.getKeys();
+    const revisionKeys = allKeys.filter(k => k.startsWith('flow_revisions_'));
+
+    for (const key of revisionKeys) {
+      const revisions = this.homey.settings.get(key) ?? [];
+      for (const rev of revisions) {
+        try { await fs.unlink(path.join('/userdata', rev.filename)); } catch (e) {}
+      }
+      this.homey.settings.unset(key); // was incorrectly set(key, revisions) before
+    }
+
+    await this.initFlowRevisions();
+  }
+
+  async purgeTrash() {
+    const trash = (this.homey.settings.get('flow_trash')) ?? [];
+    for (const entry of trash) {
+      try { await fs.unlink(path.join('/userdata', entry.filename)); } catch (e) {}
+    }
+    this.homey.settings.set('flow_trash', []);
   }
 
   async getFlowRevisions(flowId) {
@@ -134,9 +158,32 @@ module.exports = class MyApp extends Homey.App {
     }]);
   }
 
+  async setMaxRevisions(max) {
+    const previous = this.homey.settings.get('max_revisions') ?? 5;
+    this.homey.settings.set('max_revisions', max);
+
+    if (max >= previous) return;
+
+    // Purge excess revisions from all tracked flows
+    const allKeys = this.homey.settings.getKeys();
+    const revisionKeys = allKeys.filter(k => k.startsWith('flow_revisions_'));
+
+    for (const key of revisionKeys) {
+      const revisions = this.homey.settings.get(key) ?? [];
+      if (revisions.length <= max) continue;
+
+      const dropped = revisions.splice(max);
+      for (const rev of dropped) {
+        try { await fs.unlink(path.join('/userdata', rev.filename)); } catch (e) {}
+      }
+      this.homey.settings.set(key, revisions);
+    }
+  }
+
   async onFlowUpdate(flow, isAdvanced = false) {
     const key = `flow_revisions_${flow.id}`;
     const revisions = (await this.homey.settings.get(key)) ?? [];
+    const maxRevisions = this.homey.settings.get('max_revisions') ?? 5;
 
     const filename = uuidv4() + '.json';
     await fs.writeFile(path.join('/userdata', filename), JSON.stringify(this.formatFlow(flow, isAdvanced)), 'utf8');
@@ -148,7 +195,7 @@ module.exports = class MyApp extends Homey.App {
       isAdvanced,
     });
 
-    if (revisions.length > 5) {
+    if (revisions.length > maxRevisions) {
       const dropped = revisions.pop();
       try { await fs.unlink(path.join('/userdata', dropped.filename)); } catch (e) {}
     }
