@@ -1,0 +1,1 @@
+Foutje gemaakt? Geen probleem! Met Flow Versiegeschiedenis kan je oudere versies van je Flows herstellen. Hierdoor heb je altijd een backup van je meest recente wijzigingen. De versies worden automatisch opgeslagen zodat je alleen de Flow hoeft op te slaan. De versies worden allemaal in de achtergrond bewaard en je kunt ze altijd herstellen via de app-instellingen.

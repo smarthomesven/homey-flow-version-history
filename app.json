@@ -8,10 +8,12 @@
     "local"
   ],
   "name": {
-    "en": "Flow Version History"
+    "en": "Flow Version History",
+    "nl": "Flow Versiegeschiedenis"
   },
   "description": {
-    "en": "Made a mistake? No problem!"
+    "en": "Made a mistake? No problem!",
+    "nl": "Foutje gemaakt? Geen probleem!"
   },
   "source": "https://github.com/smarthomesven/homey-flow-version-history",
   "bugs": {
