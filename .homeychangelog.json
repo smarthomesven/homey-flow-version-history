@@ -16,5 +16,8 @@
   },
   "1.0.5": {
     "en": "Update dependencies"
+  },
+  "1.0.6": {
+    "en": "Translate app manifest to Dutch"
   }
 }
