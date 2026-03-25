@@ -13,5 +13,8 @@
   },
   "1.0.4": {
     "en": "Added max revisions setting, added empty trash button and added button to purge all revisions"
+  },
+  "1.0.5": {
+    "en": "Update dependencies"
   }
 }
