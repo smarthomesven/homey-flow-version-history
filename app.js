@@ -12,7 +12,7 @@ module.exports = class MyApp extends Homey.App {
    * onInit is called when the app is initialized.
    */
   async onInit() {
-    this.log('MyApp has been initialized');
+    this.log('Flow Version History has been initialized');
     this._api = await HomeyAPI.createAppAPI({
       homey: this.homey,
       debug: false
@@ -41,7 +41,7 @@ module.exports = class MyApp extends Homey.App {
       for (const rev of revisions) {
         try { await fs.unlink(path.join('/userdata', rev.filename)); } catch (e) {}
       }
-      this.homey.settings.unset(key); // was incorrectly set(key, revisions) before
+      this.homey.settings.unset(key);
     }
 
     await this.initFlowRevisions();

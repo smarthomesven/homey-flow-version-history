@@ -63,9 +63,9 @@
           }
         });
 
-        document.getElementById('purgeRevisionsBtn').addEventListener('click', function() {
-          const response = Homey.confirm('This will delete all stored revisions and reinitialize the revisions system. This action is permanent and cannot be undone. Are you sure?');
-          if (!response) return;
+        document.getElementById('purgeRevisionsBtn').addEventListener('click', async function() {
+          const confirmed = await Homey.confirm('This will delete all stored revisions and reinitialize the revisions system. This action is permanent and cannot be undone. Are you sure?');
+          if (!confirmed) return;
 
           const btn = document.getElementById('purgeRevisionsBtn');
           btn.classList.add('is-loading');
@@ -77,8 +77,8 @@
           });
         });
 
-        document.getElementById('purgeTrashBtn').addEventListener('click', function() {
-          const response = Homey.confirm('This will delete all Flows in the trash. This action is permanent and cannot be undone. Are you sure?');
+        document.getElementById('purgeTrashBtn').addEventListener('click', async function() {
+          const response = await Homey.confirm('This will delete all Flows in the trash. This action is permanent and cannot be undone. Are you sure?');
           if (!response) return;
 
           const btn = document.getElementById('purgeTrashBtn');
