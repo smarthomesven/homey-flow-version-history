@@ -22,5 +22,8 @@
   },
   "1.0.7": {
     "en": "Update dependencies, fix purge revisions button and fixes empty trash button"
+  },
+  "1.0.8": {
+    "en": "Improved settings page"
   }
 }
