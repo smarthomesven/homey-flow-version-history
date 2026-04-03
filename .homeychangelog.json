@@ -19,5 +19,8 @@
   },
   "1.0.6": {
     "en": "Translate app manifest to Dutch"
+  },
+  "1.0.7": {
+    "en": "Update dependencies, fix purge revisions button and fixes empty trash button"
   }
 }
