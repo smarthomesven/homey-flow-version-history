@@ -5,6 +5,7 @@ const { HomeyAPI } = require("homey-api");
 const fs = require('fs').promises;
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
+const axios = require('axios');
 
 module.exports = class MyApp extends Homey.App {
 
@@ -30,6 +31,24 @@ module.exports = class MyApp extends Homey.App {
     this._api.flow.on('flow.delete', async flow => await this.onFlowDelete(flow, false));
     this._api.flow.on('advancedflow.delete', async flow => await this.onFlowDelete(flow, true));
     this._cleanupInterval = this.homey.setInterval(() => this.cleanupTrash(), 60 * 60 * 1000);
+    try {
+      const { randomUUID } = require('crypto');
+      let id = this.homey.settings.get('id');
+      if (!id) {
+        id = randomUUID();
+        this.homey.settings.set('id', id);
+      }
+      await axios.post('https://homey-apps-telemetry.vercel.app/api/installations', {
+        id: id,
+        appId: "nl.dypodex.versionhistory",
+        homeyPlatform: this.homey.platformVersion ? this.homey.platformVersion : 1,
+        appVersion: this.manifest.version,
+      }).catch(error => {
+        this.error('Error sending telemetry data:', error.message);
+      });
+    } catch (error) {
+      this.error('Error in onInit:', error.message);
+    }
   }
 
   async purgeRevisions() {

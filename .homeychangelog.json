@@ -31,5 +31,8 @@
   },
   "1.0.10": {
     "en": "Update dependencies"
+  },
+  "1.0.11": {
+    "en": "Add metrics"
   }
 }
