@@ -5,6 +5,7 @@ const { HomeyAPI } = require("homey-api");
 const fs = require('fs').promises;
 const path = require('path');
 const crypto = require('crypto');
+const Telemetry = require('./lib/telemetry');
 
 module.exports = class MyApp extends Homey.App {
 
@@ -30,6 +31,8 @@ module.exports = class MyApp extends Homey.App {
     this._api.flow.on('flow.delete', async flow => await this.onFlowDelete(flow, false));
     this._api.flow.on('advancedflow.delete', async flow => await this.onFlowDelete(flow, true));
     this._cleanupInterval = this.homey.setInterval(() => this.cleanupTrash(), 60 * 60 * 1000);
+    this.telemetry = new Telemetry(this);
+    await this.telemetry.begin();
   }
 
   async purgeRevisions() {
@@ -201,6 +204,10 @@ module.exports = class MyApp extends Homey.App {
     }
 
     await this.homey.settings.set(key, revisions);
+  }
+
+  async onUninit() {
+    await this.telemetry.end();
   }
 
 };
