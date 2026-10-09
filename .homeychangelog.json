@@ -70,5 +70,8 @@
   },
   "1.0.23": {
     "en": "Added privacy policy to readme"
+  },
+  "1.0.24": {
+    "en": "Added Push SDK, removed telemetry and updated dependencies"
   }
 }
